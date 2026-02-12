@@ -12,29 +12,21 @@ cd simplecov-mcp
 pnpm install && pnpm build
 ```
 
-## Rails プロジェクトへの導入
+ビルド後、Rails プロジェクトのルートで MCP サーバーを登録：
 
-`.claude/settings.json`（プロジェクトルート）に追加：
-
-```json
-{
-  "mcpServers": {
-    "simplecov": {
-      "command": "node",
-      "args": ["/path/to/simplecov-mcp/build/index.js"],
-      "cwd": "/path/to/your-rails-app"
-    }
-  }
-}
+```bash
+claude mcp add simplecov node /path/to/simplecov-mcp/build/index.js
 ```
 
-`cwd` をプロジェクトルートにすれば `coverage/` を自動検出する。明示指定も可：
+プロジェクトの `.mcp.json` に MCP サーバーが追加される。`coverage/` ディレクトリはワーキングディレクトリから自動検出される。
 
-```json
-{
-  "env": { "SIMPLECOV_COVERAGE_PATH": "/path/to/coverage" }
-}
+カバレッジのパスを明示指定する場合：
+
+```bash
+claude mcp add simplecov -e SIMPLECOV_COVERAGE_PATH=/path/to/coverage node /path/to/simplecov-mcp/build/index.js
 ```
+
+追加後、Claude Code を再起動して `/mcp` で確認。
 
 ## ツール一覧
 
@@ -126,8 +118,7 @@ Rails プロジェクト
 ├── coverage/
 │   ├── .resultset.json  ← SimpleCov が生成（数十MB）
 │   └── .last_run.json   ← サマリー
-└── .claude/
-    └── settings.json    ← MCP 設定
+└── .mcp.json            ← MCP 設定（claude mcp add で生成）
 
 simplecov-mcp は起動時に cwd → 親 の順で coverage/ を探索し、
 .resultset.json をパースしてメモリに保持する。
