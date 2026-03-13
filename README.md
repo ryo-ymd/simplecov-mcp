@@ -102,6 +102,42 @@ Extracts only uncovered lines and branches. Useful when adding tests.
 }
 ```
 
+### `estimate_file_coverage`
+
+Estimates coverage after code changes without re-running tests. Compares the file saved at server startup (baseline) with the current file on disk, and maps old coverage data through a line-level diff.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `file_path` | string (required) | File path. Matched by suffix |
+
+```
+> estimate_file_coverage file_path=app/models/user.rb
+
+{
+  "filePath": "/usr/src/app/app/models/user.rb",
+  "fileChanged": true,
+  "originalCoverage": "85.71% (12/14)",
+  "estimatedCoverage": "82.35% (14/17)",
+  "changeSummary": { "unchanged": 45, "added": 5, "removed": 2, "modified": 3 },
+  "estimatedNewLines": [
+    { "line": 15, "type": "modified", "status": "covered", "confidence": "medium" },
+    { "line": 22, "type": "added", "status": "likely_covered", "confidence": "low" }
+  ],
+  "estimatedUncoveredLineNumbers": [30, 42, 43],
+  "note": "..."
+}
+```
+
+**Estimation logic:**
+
+| Line type | Method | Confidence |
+|---|---|---|
+| unchanged | Uses original coverage as-is | high |
+| modified | Inherits original coverage (test likely still reaches the line) | medium |
+| added | Estimates from surrounding block coverage | low |
+
+This tool is designed for agentic coding workflows: run tests once, make improvements, estimate coverage impact, and move on.
+
 ## Usage Examples with Claude
 
 ```
@@ -109,6 +145,7 @@ Extracts only uncovered lines and branches. Useful when adding tests.
 "Show uncovered lines in app/models/user.rb"
 "List controllers with coverage below 50%"
 "Write tests for the uncovered lines in this file"
+"Estimate coverage after my changes to user.rb"
 ```
 
 ## How It Works
@@ -124,4 +161,8 @@ simplecov-mcp searches for the coverage/ directory starting from cwd,
 then walking up to parent directories. It parses .resultset.json and
 holds the data in memory. Claude retrieves only the needed portions
 via tools.
+
+At startup, the server also reads and caches the source files referenced
+in coverage data. This baseline is used by estimate_file_coverage to
+detect changes and map coverage through line-level diffs (LCS-based).
 ```

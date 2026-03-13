@@ -102,6 +102,42 @@ claude mcp add simplecov -e SIMPLECOV_COVERAGE_PATH=/path/to/coverage node /path
 }
 ```
 
+### `estimate_file_coverage`
+
+テスト再実行なしでコード変更後のカバレッジを推定する。サーバー起動時に保存したベースラインと現在のファイルを行レベルで差分比較し、旧カバレッジデータをマッピングする。
+
+| パラメータ | 型 | 説明 |
+|---|---|---|
+| `file_path` | string (必須) | ファイルパス。末尾一致で検索される |
+
+```
+> estimate_file_coverage file_path=app/models/user.rb
+
+{
+  "filePath": "/usr/src/app/app/models/user.rb",
+  "fileChanged": true,
+  "originalCoverage": "85.71% (12/14)",
+  "estimatedCoverage": "82.35% (14/17)",
+  "changeSummary": { "unchanged": 45, "added": 5, "removed": 2, "modified": 3 },
+  "estimatedNewLines": [
+    { "line": 15, "type": "modified", "status": "covered", "confidence": "medium" },
+    { "line": 22, "type": "added", "status": "likely_covered", "confidence": "low" }
+  ],
+  "estimatedUncoveredLineNumbers": [30, 42, 43],
+  "note": "..."
+}
+```
+
+**推定ロジック:**
+
+| 行の種別 | 推定方法 | 信頼度 |
+|---|---|---|
+| unchanged | 旧カバレッジをそのまま使用 | high |
+| modified | 旧カバレッジを引き継ぐ（テストが同じパスを通る可能性が高い） | medium |
+| added | 周囲ブロックのカバレッジ状態から推定 | low |
+
+agentic coding のワークフロー向け：テストを1回実行 → コード改善 → カバレッジ影響を推定 → 次の作業へ。
+
 ## Claude での使い方の例
 
 ```
@@ -109,6 +145,7 @@ claude mcp add simplecov -e SIMPLECOV_COVERAGE_PATH=/path/to/coverage node /path
 「app/models/user.rb のカバレッジされていない行を見せて」
 「カバレッジが50%以下の controllers を一覧して」
 「このファイルの未カバー行に対するテストを書いて」
+「user.rb の変更後のカバレッジを推定して」
 ```
 
 ## 仕組み
@@ -123,4 +160,8 @@ Rails プロジェクト
 simplecov-mcp は起動時に cwd → 親 の順で coverage/ を探索し、
 .resultset.json をパースしてメモリに保持する。
 Claude はツール経由で必要な部分だけを取得する。
+
+起動時にカバレッジ対象のソースファイルも読み込みキャッシュする。
+このベースラインを estimate_file_coverage が使い、
+行レベル差分（LCSベース）を通じてカバレッジをマッピングする。
 ```

@@ -8,6 +8,7 @@ export function registerTools(server: McpServer, coverage: CoverageData): void {
     "SimpleCovのカバレッジサマリーを取得する。全体のline/branchカバレッジ率とファイル数を返す。",
     {},
     async () => {
+      coverage.reload();
       const summary = coverage.getSummary();
       return {
         content: [{ type: "text", text: JSON.stringify(summary, null, 2) }],
@@ -42,6 +43,7 @@ export function registerTools(server: McpServer, coverage: CoverageData): void {
         .describe("ファイルパスのフィルタ（部分一致）"),
     },
     async ({ sort_by, order, min_coverage, max_coverage, path_pattern }) => {
+      coverage.reload();
       let files = coverage.listFiles();
 
       if (path_pattern) {
@@ -99,6 +101,7 @@ export function registerTools(server: McpServer, coverage: CoverageData): void {
         .describe("ファイルパス（完全一致または末尾一致）"),
     },
     async ({ file_path }) => {
+      coverage.reload();
       const detail = coverage.getFileDetail(file_path);
       if (!detail) {
         return {
@@ -149,6 +152,7 @@ export function registerTools(server: McpServer, coverage: CoverageData): void {
         .describe("ファイルパス（完全一致または末尾一致）"),
     },
     async ({ file_path }) => {
+      coverage.reload();
       const detail = coverage.getFileDetail(file_path);
       if (!detail) {
         return {
@@ -184,6 +188,36 @@ export function registerTools(server: McpServer, coverage: CoverageData): void {
               null,
               2
             ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "estimate_file_coverage",
+    "ファイル変更後のカバレッジを推定する。テスト再実行なしで、コード変更がカバレッジに与える影響を見積もる。",
+    {
+      file_path: z
+        .string()
+        .describe("ファイルパス（完全一致または末尾一致）"),
+    },
+    async ({ file_path }) => {
+      coverage.reload();
+      const result = coverage.estimateFileCoverage(file_path);
+
+      if ("error" in result) {
+        return {
+          content: [{ type: "text", text: result.error }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };
